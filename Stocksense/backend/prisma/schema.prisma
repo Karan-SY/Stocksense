@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id  String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+  role     String @default("cashier")
+  bills    Bill[]
+}
+
+model Customer {
+  customer_id String @id @default(uuid())
+  name        String
+  phone       String?
+  email       String?
+  address     String?
+  bills       Bill[]
+}
+
+model Manufacturer {
+  manufacturer_id String    @id @default(uuid())
+  name            String
+  phone           String?
+  address         String?
+  products        Product[]
+}
+
+model Product {
+  product_id      String            @id @default(uuid())
+  name            String
+  category        String?
+  price           Decimal           @db.Decimal(10, 2)
+  manufacturer_id String
+  manufacturer    Manufacturer      @relation(fields: [manufacturer_id], references: [manufacturer_id])
+  bill_items      BillItem[]
+  inventory       Inventory?
+  sales           Sale[]
+  predictions     StockPrediction[]
+}
+
+model Inventory {
+  inventory_id    String   @id @default(uuid())
+  product_id      String   @unique
+  product         Product  @relation(fields: [product_id], references: [product_id])
+  quantity        Int      @default(0)
+  min_stock_level Int      @default(0)
+  last_updated    DateTime @updatedAt
+}
+
+model Bill {
+  bill_id      String     @id @default(uuid())
+  invoice_no   String     @unique
+  user_id      String
+  user         User       @relation(fields: [user_id], references: [user_id])
+  customer_id  String
+  customer     Customer   @relation(fields: [customer_id], references: [customer_id])
+  total_amount Decimal    @db.Decimal(10, 2)
+  bill_items   BillItem[]
+  payment      Payment?
+  createdAt    DateTime   @default(now())
+}
+
+model BillItem {
+  bill_item_id String  @id @default(uuid())
+  bill_id      String
+  bill         Bill    @relation(fields: [bill_id], references: [bill_id])
+  product_id   String
+  product      Product @relation(fields: [product_id], references: [product_id])
+  quantity     Int
+  price        Decimal @db.Decimal(10, 2)
+  subtotal     Decimal @db.Decimal(10, 2)
+}
+
+model Payment {
+  payment_id     String   @id @default(uuid())
+  bill_id        String   @unique
+  bill           Bill     @relation(fields: [bill_id], references: [bill_id])
+  payment_method String
+  amount_paid    Decimal  @db.Decimal(10, 2)
+  payment_date   DateTime @default(now())
+  status         String   @default("paid")
+}
+
+model Sale {
+  sale_id       String   @id @default(uuid())
+  product_id    String
+  product       Product  @relation(fields: [product_id], references: [product_id])
+  quantity_sold Int
+  sale_date     DateTime @default(now())
+}
+
+model StockPrediction {
+  prediction_id    String   @id @default(uuid())
+  product_id       String
+  product          Product  @relation(fields: [product_id], references: [product_id])
+  predicted_demand Int
+  prediction_date  DateTime
+  confidence_score Float
+}
